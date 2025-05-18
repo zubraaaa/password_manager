@@ -1,8 +1,20 @@
 import csv
+import os
 from cryptography.fernet import Fernet
 
 passwords = []
-key = Fernet.generate_key()
+
+def load_or_create_key():
+    if os.path.exists("key.key"):
+        with open("key.key", "rb") as key_file:
+            return key_file.read()
+    else:
+        new_key = Fernet.generate_key()
+        with open("key.key", "wb") as key_file:
+            key_file.write(new_key)
+        return new_key
+
+key = load_or_create_key()
 cipher_suite = Fernet(key)
 
 def encrypt_password(password):
@@ -23,28 +35,30 @@ def add_password():
     })
     with open('passwords.csv', mode='a', newline='') as file:
         writer = csv.writer(file)
-        writer.writerow([website, username, encrypted_password])
+        writer.writerow([website, username, encrypted_password.decode()])
 
 def get_password(website):
     for entry in passwords:
         if entry["website"] == website:
             username = entry["username"]
             encrypted_password = entry["password"]
-            decrypted_password = decrypt_password(encrypted_password)        
+            decrypted_password = decrypt_password(encrypted_password.encode())        
             print(f"Website: {website}")
             print(f"Username: {username}")
             print(f"Password: {decrypted_password}")
             return
     print("Website not found")
 
-with open('passwords.csv', mode='r') as file:
-    reader = csv.reader(file)
-    for row in reader:
-        passwords.append({
-            "website": row[0],
-            "username": row[1],
-            "password": row[2]
-        })
+# Load passwords from file
+if os.path.exists('passwords.csv'):
+    with open('passwords.csv', mode='r') as file:
+        reader = csv.reader(file)
+        for row in reader:
+            passwords.append({
+                "website": row[0],
+                "username": row[1],
+                "password": row[2]
+            })
 
 while True:
     print("\n1. Add Password")
